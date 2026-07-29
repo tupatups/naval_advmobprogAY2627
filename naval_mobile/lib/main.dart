@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:naval_mobile/counter.dart';
 
+// app entry point  
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ThemeModel(),
+      create: (context) => ThemeModel(),
       child: const MyApp(),
     ),
   );
@@ -20,16 +20,7 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       theme: themeModel.isDark ? ThemeData.dark() : ThemeData.light(),
-      home: Builder(
-        builder: (context) => MyHomePage(
-          onOpenThemePage: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyHome()),
-            );
-          },
-        ),
-      ),
+      home: const MyHome(),
     );
   }
 }
@@ -45,6 +36,7 @@ class ThemeModel with ChangeNotifier {
   }
 }
 
+// screen layout displaying the app bar and the theme toggle switch
 class MyHome extends StatelessWidget {
   const MyHome({super.key});
 
@@ -54,7 +46,7 @@ class MyHome extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('App State Example'),
+        title: const Text("App State Example"),
         actions: [
           Switch(
             value: themeModel.isDark,
@@ -62,8 +54,13 @@ class MyHome extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(
-        child: Text('Toggle the theme using the switch in the app bar.'),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Toggle the theme using the switch in the app bar.'),
+          ],
+        ),
       ),
     );
   }
