@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:naval_mobile/home_screen.dart';
 
 // app entry point  
 void main() {
@@ -20,7 +21,9 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       theme: themeModel.isDark ? ThemeData.dark() : ThemeData.light(),
-      home: const MyHome(),
+      home: MyHomePage(onOpenThemePage: (ctx) => Navigator.of(ctx).push(
+        MaterialPageRoute(builder: (_) => const MyHome()),
+          )),
     );
   }
 }

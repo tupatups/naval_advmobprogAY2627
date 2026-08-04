@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.onOpenThemePage});
 
-  final VoidCallback onOpenThemePage;
+  final void Function(BuildContext) onOpenThemePage;
 
   @override
   State<MyHomePage> createState() => _MyHomePagePageState();
@@ -33,7 +33,7 @@ class _MyHomePagePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: widget.onOpenThemePage,
+              onPressed: () => widget.onOpenThemePage(context),
               child: const Text('Go to Change Theme Page'),
             ),
           ],
