@@ -1,69 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:naval_mobile/home_screen.dart';
 
-// app entry point  
-void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeModel(),
-      child: const MyApp(),
-    ),
-  );
+import 'providers/theme_provider.dart';
+import 'screens/home_screen.dart';
+import 'screens/settings_screen.dart';
+// App entry point with async initialization
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
+    DeviceOrientation.portraitUp,
+  ]);
+  await dotenv.load(fileName: 'assets/.env');
+  runApp(const NavalAdvMobProg());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class NavalAdvMobProg extends StatelessWidget {
+  const NavalAdvMobProg({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final themeModel = Provider.of<ThemeModel>(context);
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: ScreenUtilInit(
+        designSize: const Size(412, 915),
+        minTextAdapt: true,
+        splitScreenMode: true,
+        builder: (context, child) {
+          final themeModel = context.watch<ThemeProvider>();
 
-    return MaterialApp(
-      theme: themeModel.isDark ? ThemeData.dark() : ThemeData.light(),
-      home: MyHomePage(onOpenThemePage: (ctx) => Navigator.of(ctx).push(
-        MaterialPageRoute(builder: (_) => const MyHome()),
-          )),
-    );
-  }
-}
-
-class ThemeModel with ChangeNotifier {
-  bool _isDark = false;
-
-  bool get isDark => _isDark;
-
-  void toggleTheme() {
-    _isDark = !_isDark;
-    notifyListeners();
-  }
-}
-
-// screen layout displaying the app bar and the theme toggle switch
-class MyHome extends StatelessWidget {
-  const MyHome({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final themeModel = Provider.of<ThemeModel>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("App State Example"),
-        actions: [
-          Switch(
-            value: themeModel.isDark,
-            onChanged: (_) => themeModel.toggleTheme(),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Toggle the theme using the switch in the app bar.'),
-          ],
-        ),
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'E-commerce App',
+            theme: ThemeData.light(useMaterial3: true),
+            darkTheme: ThemeData.dark(useMaterial3: true),
+            themeMode: themeModel.themeMode,
+            initialRoute: '/home',
+            routes: <String, WidgetBuilder>{
+              '/home': (context) => HomeScreen(),
+              '/settings': (context) => SettingsScreen(),
+            },
+          );
+        },
       ),
     );
   }
