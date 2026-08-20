@@ -157,7 +157,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                   SizedBox(height: 4.h),
                                   CustomText(
                                     text:
-                                        '₱ ${product.price.toStringAsFixed(2)}',
+                                        '\$ ${product.price.toStringAsFixed(2)}',
                                     fontSize: 13.sp,
                                     fontWeight: FontWeight.w600,
                                   ),

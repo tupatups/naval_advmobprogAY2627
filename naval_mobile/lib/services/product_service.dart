@@ -29,4 +29,14 @@ class ProductService {
       throw Exception('Failed to search products');
     }
   }
+  
+  Future<Product> getProductById(int id) async {
+    final response = await http.get(Uri.parse('$host/products/$id'));
+
+    if (response.statusCode == 200) {
+      return Product.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load product details');
+    }
+  }
 }

@@ -2,12 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../models/product.dart';
+import '../services/cart_service.dart';
 import '../widgets/custom_text.dart';
 
 class DetailScreen extends StatelessWidget {
   final Product product;
+  final int _currentUserId = 1;
 
   const DetailScreen({super.key, required this.product});
+
+  
+  void _addToCart(BuildContext context) async {
+    try {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Adding to cart...')));
+
+      final success = await CartService().addToCart(
+        _currentUserId,
+        product.id,
+        1,
+      );
+
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to cart successfully!')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to add to cart: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +140,16 @@ class DetailScreen extends StatelessWidget {
                       fontWeight: FontWeight.w400,
                     ),
                     SizedBox(height: 16.h),
+                    _sectionTitle('Tags'),
+                    SizedBox(height: 8.h),
+                    Wrap(
+                      spacing: 8.w,
+                      runSpacing: 8.h,
+                      children: product.tags
+                          .map((tag) => Chip(label: Text(tag)))
+                          .toList(),
+                    ),
+                    SizedBox(height: 16.h),
                     _sectionTitle('Product Details'),
                     SizedBox(height: 8.h),
                     _detailRow('Rating', product.rating.toStringAsFixed(1)),
@@ -123,9 +164,68 @@ class DetailScreen extends StatelessWidget {
                     _detailRow('Barcode', product.meta.barcode),
                     _detailRow('Created At', product.meta.createdAt),
                     _detailRow('Updated At', product.meta.updatedAt),
+                    SizedBox(height: 16.h),
+                    _sectionTitle('Reviews'),
+                    SizedBox(height: 8.h),
+                    if (product.reviews.isEmpty)
+                      const Text('No reviews available yet.')
+                    else
+                      ListView.separated(
+                        itemCount: product.reviews.length,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        separatorBuilder: (context, index) =>
+                            SizedBox(height: 10.h),
+                        itemBuilder: (context, index) {
+                          final review = product.reviews[index];
+                          return Card(
+                            elevation: 1,
+                            child: Padding(
+                              padding: EdgeInsets.all(12.r),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: CustomText(
+                                          text: review.reviewerName,
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Row(
+                                        children: List.generate(
+                                          review.rating,
+                                          (_) => Icon(
+                                            Icons.star,
+                                            size: 16.sp,
+                                            color: Colors.amber,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  CustomText(
+                                    text: review.comment,
+                                    fontSize: 13.sp,
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  CustomText(
+                                    text: review.date,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     SizedBox(height: 20.h),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () => _addToCart(context),
                       style: ElevatedButton.styleFrom(
                         minimumSize: Size(double.infinity, 52.h),
                         shape: RoundedRectangleBorder(

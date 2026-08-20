@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../screens/cart_screen.dart';
 import '../screens/product_screen.dart';
 import '../widgets/custom_text.dart';
 
@@ -15,6 +16,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+  final int _currentUserId = 15;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,21 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
           automaticallyImplyLeading: false,
           elevation: 2,
           title: (_selectedIndex == 0)
-              ? Image.asset(
-                  'assets/images/nubdexchange_logo.png',
-                  height: 32.h,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return CustomText(
-                      text: 'NUBD Exchange',
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                    );
-                  },
-                )
+              ? Image.asset('assets/images/nubdexchange_logo.png', scale: 11.sp)
               : CustomText(
                   text: (_selectedIndex == 1)
-                      ? 'Chat'
+                      ? 'Cart'
                       : (_selectedIndex == 2)
                       ? 'Profile'
                       : 'Home',
@@ -56,20 +53,37 @@ class _HomeScreenState extends State<HomeScreen> {
         body: PageView(
           physics: const NeverScrollableScrollPhysics(),
           controller: _pageController,
-          children: const <Widget>[ProductScreen()],
+          children: <Widget>[
+            const ProductScreen(),
+            CartScreen(userId: _currentUserId),
+            const Center(child: Text('Profile Screen')),
+          ],
           onPageChanged: (page) {
             setState(() {
               _selectedIndex = page;
             });
           },
         ),
+        floatingActionButton: _selectedIndex == 1
+            ? null // hide in the cart screen
+            : FloatingActionButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Chat opened')));
+                },
+                child: const Icon(Icons.chat),
+              ),
         bottomNavigationBar: BottomNavigationBar(
-          showSelectedLabels: false, //selected item
-          showUnselectedLabels: false, //unselected item
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
           onTap: _onTappedBar,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.shop_2), label: 'Shop'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart),
+              label: 'Cart',
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
           currentIndex: _selectedIndex,
@@ -82,6 +96,10 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedIndex = value;
     });
-    _pageController.jumpToPage(value);
+    _pageController.animateToPage(
+      value,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 }
