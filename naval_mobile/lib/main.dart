@@ -6,7 +6,12 @@ import 'package:provider/provider.dart';
 
 import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/signin_screen.dart';
+import 'screens/splash_screen.dart';
+import 'theme/app_theme.dart';
+
 // App entry point with async initialization
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,13 +39,16 @@ class NavalAdvMobProg extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'E-commerce App',
-            theme: ThemeData.light(useMaterial3: true),
-            darkTheme: ThemeData.dark(useMaterial3: true),
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
             themeMode: themeModel.themeMode,
-            initialRoute: '/home',
+            initialRoute: '/',
             routes: <String, WidgetBuilder>{
-              '/home': (context) => HomeScreen(),
-              '/settings': (context) => SettingsScreen(),
+              '/': (context) => const SplashScreen(),
+              '/signin': (context) => const LoginScreen(),
+              '/profile': (context) => const ProfileScreen(),
+              '/home': (context) => const HomeScreen(),
+              '/settings': (context) => const SettingsScreen(),
             },
           );
         },

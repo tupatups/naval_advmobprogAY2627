@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../screens/cart_screen.dart';
 import '../screens/product_screen.dart';
+import '../screens/profile_screen.dart';
+import '../services/user_service.dart';
 import '../widgets/custom_text.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,7 +18,27 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
-  final int _currentUserId = 15;
+  final UserService _userService = UserService();
+
+  int _currentUserId = 1; // Defaults to 1 until local storage resolves
+  static const Color _tiktokRed = Color(0xFFFF2D55);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUserId();
+  }
+
+  Future<void> _loadCurrentUserId() async {
+    final userData = await _userService.getUserData();
+    final id = userData['id'];
+    if (id != null && id is int && id > 0) {
+      if (!mounted) return;
+      setState(() {
+        _currentUserId = id;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -31,9 +53,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          elevation: 2,
+          elevation: 0,
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
           title: (_selectedIndex == 0)
-              ? Image.asset('assets/images/nubdexchange_logo.png', scale: 11.sp)
+              ? Image.asset(
+                  'assets/images/tiktok_shop_header.png',
+                  height: 36.h,
+                  fit: BoxFit.contain,
+                )
               : CustomText(
                   text: (_selectedIndex == 1)
                       ? 'Cart'
@@ -56,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: <Widget>[
             const ProductScreen(),
             CartScreen(userId: _currentUserId),
-            const Center(child: Text('Profile Screen')),
+            const ProfileScreen(),
           ],
           onPageChanged: (page) {
             setState(() {
@@ -65,8 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         floatingActionButton: _selectedIndex == 1
-            ? null // hide in the cart screen
+            ? null
             : FloatingActionButton(
+                backgroundColor: _tiktokRed,
+                foregroundColor: Colors.white,
                 onPressed: () {
                   ScaffoldMessenger.of(
                     context,
@@ -75,6 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Icon(Icons.chat),
               ),
         bottomNavigationBar: BottomNavigationBar(
+          selectedItemColor: _tiktokRed,
+          unselectedItemColor: Colors.grey,
+          backgroundColor: Colors.black,
           showSelectedLabels: false,
           showUnselectedLabels: false,
           onTap: _onTappedBar,
