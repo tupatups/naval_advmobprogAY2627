@@ -11,6 +11,7 @@ history
 svn/
 swiftpm/
 migrate_working_dir/
+naval_mobile/lib/firebase_options.dart
 
 # IntelliJ related
 *.iml
