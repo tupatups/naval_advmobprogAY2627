@@ -98,9 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 backgroundColor: _tiktokRed,
                 foregroundColor: Colors.white,
                 onPressed: () {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Chat opened')));
+                  Navigator.pushNamed(context, '/chat');
                 },
                 child: const Icon(Icons.chat),
               ),

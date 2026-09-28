@@ -13,6 +13,7 @@ import 'screens/settings_screen.dart';
 import 'screens/signin_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/chat_screen.dart';
 import 'theme/app_theme.dart';
 
 // App entry point with async initializationx`
@@ -56,6 +57,7 @@ class NavalAdvMobProg extends StatelessWidget {
               '/profile': (context) => const ProfileScreen(),
               '/home': (context) => const HomeScreen(),
               '/settings': (context) => const SettingsScreen(),
+              '/chat': (context) => const ChatScreen(),
             },
           );
         },
