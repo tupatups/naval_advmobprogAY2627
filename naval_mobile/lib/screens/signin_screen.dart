@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -25,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   static const String _tiktokIconUrl =
       'https://img.icons8.com/?size=100&id=123922&format=png&color=FFFFFF';
 
-  void _login() async {
+  void _loginDummyJson() async {
     if (!_formKey.currentState!.validate()) return;
 
     final UserService userService = UserService();
@@ -36,8 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
-
-      await userService.saveUserData(response);
 
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -68,6 +67,42 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.black87,
           behavior: SnackBarBehavior.floating,
         ),
+      );
+    }
+  }
+
+  Future<void> _loginFirebase() async {
+    if (!_formKey.currentState!.validate()) return;
+    final identifier = _usernameController.text.trim();
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(identifier)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Firebase login requires an email address.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await UserService().signIn(
+        email: identifier,
+        password: _passwordController.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      Navigator.pushReplacementNamed(context, '/home');
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(firebaseAuthErrorMessage(error))));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to sign in. Please try again.')),
       );
     }
   }
@@ -120,16 +155,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _usernameController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'Username',
-                      labelStyle: TextStyle(
-                        color: Colors.white,
-                      ),
+                      labelText: 'Username or Email',
+                      labelStyle: TextStyle(color: Colors.white),
                       hintStyle: TextStyle(color: Colors.white70),
                       errorStyle: const TextStyle(color: Colors.white),
-                      prefixIcon: const Icon(
-                        Icons.person,
-                        color: _tiktokRed,
-                      ),
+                      prefixIcon: const Icon(Icons.person, color: _tiktokRed),
                       focusedBorder: const OutlineInputBorder(
                         borderSide: BorderSide(color: _tiktokRed),
                       ),
@@ -145,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Please enter your username'
+                        ? 'Please enter your username or email'
                         : null,
                   ),
                   SizedBox(height: 16.h),
@@ -155,9 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      labelStyle: TextStyle(
-                        color: Colors.white,
-                      ),
+                      labelStyle: TextStyle(color: Colors.white),
                       hintStyle: TextStyle(color: Colors.white70),
                       errorStyle: const TextStyle(color: Colors.white),
                       prefixIcon: const Icon(Icons.lock, color: _tiktokRed),
@@ -192,14 +220,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   SizedBox(height: 24.h),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
+                    onPressed: _isLoading ? null : _loginDummyJson,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _tiktokRed,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 14.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
+                      shape: const StadiumBorder(),
                     ),
                     child: _isLoading
                         ? SizedBox(
@@ -212,7 +238,42 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           )
-                        : Text('Log In', style: TextStyle(fontSize: 16.sp)),
+                        : Text(
+                            'Login with DummyJSON',
+                            style: TextStyle(fontSize: 16.sp),
+                          ),
+                  ),
+                  SizedBox(height: 12.h),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _loginFirebase,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _tiktokRed,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 20.h,
+                            width: 20.w,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            'Login with Firebase',
+                            style: TextStyle(fontSize: 16.sp),
+                          ),
+                  ),
+                  SizedBox(height: 12.h),
+                  TextButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () => Navigator.pushNamed(context, '/signup'),
+                    child: const Text('Create account'),
                   ),
                 ],
               ),

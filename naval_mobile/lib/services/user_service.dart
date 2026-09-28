@@ -1,7 +1,14 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user.dart';
+import '../constants.dart';
+import '../models/login_type.dart';
+import '../models/user.dart' as app_user;
+
+ValueNotifier<UserService> userService = ValueNotifier(UserService());
 
 class UserService {
   static const String _baseUrl = 'https://dummyjson.com';
@@ -24,6 +31,7 @@ class UserService {
     if (response.statusCode == 200) {
       data = jsonDecode(response.body);
       await saveUserData(data);
+      await _saveLoginType(LoginType.dummyJson);
       return data;
     } else {
       throw Exception(response.body);
@@ -32,7 +40,7 @@ class UserService {
 
   Future<void> saveUserData(Map<String, dynamic> userData) async {
     final prefs = await SharedPreferences.getInstance();
-    final user = User.fromJson(userData);
+    final user = app_user.User.fromJson(userData);
 
     await prefs.setInt('id', user.id);
     await prefs.setString('username', user.username);
@@ -53,6 +61,30 @@ class UserService {
 
   Future<Map<String, dynamic>> getUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    if (await getLoginType() == LoginType.firebase) {
+      final user = currentUser;
+      if (user == null) return {};
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final profile = snapshot.data() ?? <String, dynamic>{};
+      final createdAt = profile['createdAt'];
+      return {
+        'id': 0,
+        'uid': user.uid,
+        'username': profile['username'] ?? user.displayName ?? '',
+        'email': user.email ?? profile['email'] ?? '',
+        'firstName': profile['fName'] ?? '',
+        'lastName': profile['lName'] ?? '',
+        'age': profile['age'] ?? 0,
+        'phone': profile['contactNo'] ?? '',
+        'image': '',
+        'memberSince': createdAt is Timestamp
+            ? createdAt.toDate().toIso8601String()
+            : createdAt?.toString() ?? '',
+      };
+    }
     return {
       'id': prefs.getInt('id') ?? 0,
       'username': prefs.getString('username') ?? '',
@@ -64,20 +96,27 @@ class UserService {
       'accessToken': prefs.getString('accessToken') ?? '',
       'refreshToken': prefs.getString('refreshToken') ?? '',
       'token': prefs.getString('token') ?? prefs.getString('accessToken') ?? '',
+      'phone': prefs.getString('phone') ?? '',
+      'age': prefs.getInt('age') ?? 0,
     };
   }
 
-  Future<User> getUser() async {
+  Future<void> updateLocalUsername(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username);
+  }
+
+  Future<app_user.User> getUser() async {
     final userData = await getUserData();
-    return User.fromJson(userData);
+    return app_user.User.fromJson(userData);
   }
 
   /// Fetches full profile details from the DummyJSON API
-  Future<User> fetchFullUserProfile(int userId) async {
+  Future<app_user.User> fetchFullUserProfile(int userId) async {
     final response = await http.get(Uri.parse('$_baseUrl/users/$userId'));
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return User.fromJson(json);
+      return app_user.User.fromJson(json);
     } else {
       throw Exception('Failed to fetch full user profile');
     }
@@ -90,11 +129,145 @@ class UserService {
   }
 
   Future<void> logout() async {
+    await signOutAll();
+  }
+
+  Future<LoginType?> getLoginType() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(loginTypeKey);
+    for (final type in LoginType.values) {
+      if (type.name == value) return type;
+    }
+    return null;
+  }
+
+  Future<void> _saveLoginType(LoginType loginType) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(loginTypeKey, loginType.name);
+  }
+
+  Future<firebase_auth.UserCredential> signIn({
+    required String email,
+    required String password,
+  }) async {
+    final credential = await firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    await _saveLoginType(LoginType.firebase);
+    return credential;
+  }
+
+  Future<firebase_auth.UserCredential> createAccount({
+    required String email,
+    required String password,
+  }) async {
+    final credential = await firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    await _saveLoginType(LoginType.firebase);
+    return credential;
+  }
+
+  Future<void> signOut() async {
+    await firebaseAuth.signOut();
+  }
+
+  Future<void> updateUsername({required String username}) async {
+    final user = currentUser;
+    if (user == null) {
+      throw StateError('No Firebase user is signed in.');
+    }
+    await user.updateDisplayName(username);
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'username': username,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteAccount({
+    required String email,
+    required String password,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw StateError('No Firebase user is signed in.');
+    }
+    final credential = firebase_auth.EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
+    await user.delete();
+    await firebaseAuth.signOut();
+  }
+
+  Future<void> resetPasswordFromCurrentPassword({
+    required String currentPassword,
+    required String newPassword,
+    required String email,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw StateError('No Firebase user is signed in.');
+    }
+    final credential = firebase_auth.EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+  }
+
+  Future<String?> refreshFirebaseToken() async {
+    return currentUser?.getIdToken(true);
+  }
+
+  Future<void> signOutAll() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      if (currentUser != null) {
+        await firebaseAuth.signOut();
+      }
     } catch (e) {
       throw Exception('Failed to log out: $e');
     }
+  }
+}
+
+final firebase_auth.FirebaseAuth firebaseAuth =
+    firebase_auth.FirebaseAuth.instance;
+
+firebase_auth.User? get currentUser => firebaseAuth.currentUser;
+
+Stream<firebase_auth.User?> get authStateChanges =>
+    firebaseAuth.authStateChanges();
+
+String firebaseAuthErrorMessage(Object error) {
+  if (error is! firebase_auth.FirebaseAuthException) {
+    return 'Something went wrong. Please try again.';
+  }
+
+  switch (error.code) {
+    case 'email-already-in-use':
+      return 'That email address is already in use.';
+    case 'weak-password':
+      return 'That password is too weak.';
+    case 'invalid-email':
+      return 'Please enter a valid email address.';
+    case 'user-not-found':
+      return 'No account was found for that email address.';
+    case 'wrong-password':
+      return 'The password is incorrect.';
+    case 'invalid-credential':
+      return 'The email or password is incorrect.';
+    case 'requires-recent-login':
+      return 'Please sign in again before trying that action.';
+    case 'network-request-failed':
+      return 'Network error. Check your connection and try again.';
+    default:
+      return error.message ?? 'Something went wrong. Please try again.';
   }
 }

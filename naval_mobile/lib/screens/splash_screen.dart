@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../models/login_type.dart';
 import '../services/user_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,27 +16,61 @@ class _SplashScreenState extends State<SplashScreen> {
   static const Color _tiktokRed = Color(0xFFFF2D55);
   static const String _tiktokIconUrl =
       'https://img.icons8.com/?size=100&id=123922&format=png&color=FFFFFF';
+  StreamSubscription? _authSubscription;
+  bool _hasRouted = false;
 
   @override
   void initState() {
     super.initState();
+    _authSubscription = authStateChanges.listen((user) {
+      if (user == null && !_hasRouted && mounted) {
+        _routeToSignIn();
+      }
+    });
     _checkAuthentication();
   }
 
   Future<void> _checkAuthentication() async {
     await Future.delayed(const Duration(milliseconds: 1500));
 
-    final loggedIn = await _userService.isLoggedIn();
-
+    final loginType = await _userService.getLoginType();
     if (!mounted) return;
 
-    if (loggedIn) {
+    if (loginType == LoginType.firebase) {
+      if (currentUser != null) {
+        await _userService.refreshFirebaseToken();
+        if (!mounted) return;
+        _routeToHome();
+      } else {
+        _routeToSignIn();
+      }
+    } else if (loginType == LoginType.dummyJson &&
+        await _userService.isLoggedIn()) {
+      if (!mounted) return;
       final userData = await _userService.getUserData();
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home', arguments: userData);
+      _routeToHome(arguments: userData);
     } else {
-      Navigator.pushReplacementNamed(context, '/signin');
+      _routeToSignIn();
     }
+  }
+
+  void _routeToHome({Object? arguments}) {
+    if (_hasRouted || !mounted) return;
+    _hasRouted = true;
+    Navigator.pushReplacementNamed(context, '/home', arguments: arguments);
+  }
+
+  void _routeToSignIn() {
+    if (_hasRouted || !mounted) return;
+    _hasRouted = true;
+    Navigator.pushReplacementNamed(context, '/signin');
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   @override
